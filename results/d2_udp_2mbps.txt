@@ -1,0 +1,5 @@
+protocol=udp
+bottleneck=2Mbps
+delay=10ms
+received_bytes=2181120
+throughput_mbps=2.1811

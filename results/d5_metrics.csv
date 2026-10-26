@@ -1,0 +1,6 @@
+scenario,protocol,bottleneck,qdisc,device_queue,tx_packets,rx_packets,lost_packets,loss_rate_pct,rx_bytes,avg_delay_ms,avg_jitter_ms,throughput_mbps,qdisc_enqueued,qdisc_dropped,device_received,device_dropped,qdisc_occ_max,qdisc_occ_mean,device_occ_max,device_occ_mean,first_tx_s,last_rx_s,rx_span_s
+default,udp,2Mbps,ns3::FqCoDelQueueDisc MaxSize=10240p,ns3::DropTailQueue<Packet> MaxSize=100p,3906,2130,1743,44.6237,2240760,1272.51,1.0912,1.99272,3906,1743,2163,0,617,366.574,100,86.969,1.00205,9.99781,8.99577
+fqcodel100,udp,2Mbps,ns3::FqCoDelQueueDisc MaxSize=100p,ns3::DropTailQueue<Packet> MaxSize=100p,3906,2039,1867,47.7983,2145028,607.529,1.24232,1.99257,3389,1867,2039,0,100,62.5325,100,81.9269,1.00205,9.61416,8.61211
+fifo100,udp,2Mbps,ns3::PfifoFastQueueDisc MaxSize=100p,ns3::DropTailQueue<Packet> MaxSize=100p,3906,2097,1809,46.3134,2206044,783.876,0.585373,1.99267,2097,1809,2097,0,100,75.99,100,84.3744,1.00205,9.85869,8.85664
+devq100,udp,2Mbps,none,ns3::DropTailQueue<Packet> MaxSize=100p,3906,1997,0,0,2100844,419.949,0.415069,1.99249,0,0,1997,0,0,0,100,79.968,1.00205,9.43709,8.43504
+devq10,udp,2Mbps,none,ns3::DropTailQueue<Packet> MaxSize=10p,3906,1907,0,0,2006164,60.8289,0.245707,1.99232,0,0,1907,0,0,0,10,7.81081,1.00205,9.05765,8.0556

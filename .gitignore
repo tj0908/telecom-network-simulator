@@ -1,0 +1,14 @@
+# build artifacts (binaries are rebuilt by the README commands)
+/udp_baseline
+/tcp_udp_compare
+/flow_metrics
+/queue_compare
+*.o
+build/
+
+# python caches and temp files
+__pycache__/
+*.pyc
+*.tmp
+
+# experiment data under results/ is intentionally kept

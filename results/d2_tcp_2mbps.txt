@@ -1,0 +1,5 @@
+protocol=tcp
+bottleneck=2Mbps
+delay=10ms
+received_bytes=1932288
+throughput_mbps=1.9323

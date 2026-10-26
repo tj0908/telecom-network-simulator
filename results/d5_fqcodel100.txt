@@ -1,0 +1,9 @@
+scenario=fqcodel100 protocol=udp bottleneck=2Mbps delay=10ms
+actual_qdisc: ns3::FqCoDelQueueDisc MaxSize=100p
+actual_device_queue: ns3::DropTailQueue<Packet> MaxSize=100p
+flowmonitor: txPackets=3906 rxPackets=2039 lostPackets=1867 loss_rate_pct=47.7983 rxBytes=2145028
+flowmonitor: avg_delay_ms=607.5286 avg_jitter_ms=1.2423 firstTx=1.0020 lastRx=9.6142 rx_span_s=8.6121 throughput_mbps=1.9926
+qdisc_counters: present=yes enqueued=3389 dropped=1867
+device_queue_counters: received=2039 dropped=0 dropped_before_enqueue=0
+queue_occupancy_samples=999 qdisc_max=100 qdisc_mean=62.5325 device_max=100 device_mean=81.9269
+accounting: unreceived=1867 confirmed_dropped=1867 residual_bottleneck_queue=0 (qdisc_end=0 device_end=0) in_flight_or_downstream=0

@@ -1,0 +1,9 @@
+scenario=fifo100 protocol=udp bottleneck=2Mbps delay=10ms
+actual_qdisc: ns3::PfifoFastQueueDisc MaxSize=100p
+actual_device_queue: ns3::DropTailQueue<Packet> MaxSize=100p
+flowmonitor: txPackets=3906 rxPackets=2097 lostPackets=1809 loss_rate_pct=46.3134 rxBytes=2206044
+flowmonitor: avg_delay_ms=783.8758 avg_jitter_ms=0.5854 firstTx=1.0020 lastRx=9.8587 rx_span_s=8.8566 throughput_mbps=1.9927
+qdisc_counters: present=yes enqueued=2097 dropped=1809
+device_queue_counters: received=2097 dropped=0 dropped_before_enqueue=0
+queue_occupancy_samples=999 qdisc_max=100 qdisc_mean=75.9900 device_max=100 device_mean=84.3744
+accounting: unreceived=1809 confirmed_dropped=1809 residual_bottleneck_queue=0 (qdisc_end=0 device_end=0) in_flight_or_downstream=0

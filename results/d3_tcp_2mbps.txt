@@ -1,0 +1,15 @@
+config: protocol=tcp bottleneck=2Mbps delay=10ms
+bottleneck_queue: ns3::DropTailQueue<Packet> MaxSize=100 packets
+bottleneck_qdisc: ns3::FqCoDelQueueDisc MaxSize=10240 packets
+bottleneck_qdisc_end: current_size=0 packets total_dropped=8 total_enqueued=3617
+--- FlowMonitor (IP layer) ---
+flow 1 [data] 10.1.1.1:49153 -> 10.1.3.2:9000 ip_proto=6
+  txPackets=3617 rxPackets=3609 lostPackets=8 loss_rate_pct=0.2212
+  rxBytes=2119960 avg_delay_ms=217.8549 avg_jitter_ms=2.2585
+  firstTx=1.0000 lastTx=9.5742 firstRx=1.0143 lastRx=9.5885 rx_span_s=8.5885 flow_throughput_mbps=1.9747
+flow 2 [reverse] 10.1.3.2:9000 -> 10.1.1.1:49153 ip_proto=6
+  txPackets=2001 rxPackets=2001 lostPackets=0 loss_rate_pct=0.0000
+  rxBytes=110016 avg_delay_ms=14.3194 avg_jitter_ms=0.0005
+  firstTx=1.0143 lastTx=9.5595 firstRx=1.0286 lastRx=9.5742 rx_span_s=8.5599 flow_throughput_mbps=0.1028
+--- PacketSink (application layer) ---
+sink_received_bytes=1932288 sink_throughput_8s_mbps=1.9323

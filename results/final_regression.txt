@@ -1,0 +1,23 @@
+===== build =====
+[PASS] build udp_baseline
+[PASS] build tcp_udp_compare
+[PASS] build flow_metrics
+[PASS] build queue_compare
+===== D1 =====
+[PASS] D1 udp_baseline output
+===== D2 =====
+[PASS] D2 tcp@2Mbps reproduces saved result
+[PASS] D2 udp@2Mbps reproduces saved result
+===== D3 =====
+[PASS] D3 udp@2Mbps FlowMonitor lostPackets=1743
+===== D4 =====
+[PASS] D4 run_experiments validation
+[PASS] D4 metrics identical to saved CSV
+===== D5 =====
+[PASS] D5 queue experiments run
+[PASS] D5 metrics identical to saved CSV
+[PASS] D5 default accounting reconciles (1743 dropped + 29 residual + 4 in flight)
+===== figures =====
+[PASS] figures generated (6 png files)
+===== summary =====
+ALL CHECKS PASSED
