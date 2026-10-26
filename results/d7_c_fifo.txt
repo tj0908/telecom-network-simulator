@@ -1,0 +1,10 @@
+group=C queue=fifo udp_rate=4Mbps bottleneck=2Mbps
+actual_qdisc: ns3::PfifoFastQueueDisc MaxSize=100p
+actual_device_queue: ns3::DropTailQueue<Packet> MaxSize=100p
+flow=tcp1 protocol=tcp txPackets=107 rxPackets=68 lostPackets=39 loss_rate_pct=36.4486 unreceived_pct=36.4486 avg_delay_ms=414.7343 rxBytes=38916 throughput_mbps=0.1389 firstTx=1.0000 lastRx=3.2419
+flow=tcp2 protocol=tcp txPackets=112 rxPackets=73 lostPackets=39 loss_rate_pct=34.8214 unreceived_pct=34.8214 avg_delay_ms=350.5376 rxBytes=41856 throughput_mbps=0.0305 firstTx=1.0000 lastRx=11.9934
+flow=udp protocol=udp txPackets=4882 rxPackets=2501 lostPackets=2381 loss_rate_pct=48.7710 unreceived_pct=48.7710 avg_delay_ms=814.7505 rxBytes=2631052 throughput_mbps=1.9386 firstTx=1.0020 lastRx=11.8597
+qdisc_counters: enqueued=2642 dropped=2459
+device_queue_counters: received=2642 dropped=0
+queue_occupancy_samples=1199 qdisc_max=100 qdisc_mean=82.1810 device_max=100 device_mean=87.8966
+accounting: unreceived_total=2459 confirmed_dropped_bottleneck=2459 residual_bottleneck_queue=0 (qdisc_end=0 device_end=0) in_flight_or_elsewhere=0

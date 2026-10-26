@@ -1,0 +1,10 @@
+group=B queue=fqcodel udp_rate=500kbps bottleneck=2Mbps
+actual_qdisc: ns3::FqCoDelQueueDisc MaxSize=100p
+actual_device_queue: ns3::DropTailQueue<Packet> MaxSize=100p
+flow=tcp1 protocol=tcp txPackets=1843 rxPackets=1792 lostPackets=10 loss_rate_pct=0.5426 unreceived_pct=2.7672 avg_delay_ms=258.1727 rxBytes=1052628 throughput_mbps=0.7658 firstTx=1.0000 lastRx=11.9963
+flow=tcp2 protocol=tcp txPackets=1821 rxPackets=1766 lostPackets=7 loss_rate_pct=0.3844 unreceived_pct=3.0203 avg_delay_ms=258.2344 rxBytes=1037340 throughput_mbps=0.7545 firstTx=1.0000 lastRx=11.9986
+flow=udp protocol=udp txPackets=610 rxPackets=610 lostPackets=0 loss_rate_pct=0.0000 unreceived_pct=0.0000 avg_delay_ms=263.1743 rxBytes=641720 throughput_mbps=0.5008 firstTx=1.0164 lastRx=11.2674
+qdisc_counters: enqueued=4274 dropped=17
+device_queue_counters: received=4257 dropped=0
+queue_occupancy_samples=1199 qdisc_max=17 qdisc_mean=1.2619 device_max=100 device_mean=83.3887
+accounting: unreceived_total=106 confirmed_dropped_bottleneck=17 residual_bottleneck_queue=83 (qdisc_end=0 device_end=83) in_flight_or_elsewhere=6

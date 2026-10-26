@@ -3,6 +3,7 @@
 /tcp_udp_compare
 /flow_metrics
 /queue_compare
+/multiflow_fairness
 *.o
 build/
 

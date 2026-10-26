@@ -1,0 +1,7 @@
+group,queue,udp_rate,tcp1_throughput_mbps,tcp2_throughput_mbps,udp_throughput_mbps,jain_tcp,jain_all,flows_in_jain_all,tcp1_avg_delay_ms,tcp2_avg_delay_ms,udp_avg_delay_ms,qdisc_dropped,device_dropped,qdisc_occ_mean,device_occ_mean
+A,fifo,none,1.0050,0.9754,,0.9998,0.9998,2,381.95,381.88,,21,0,50.8991,86.9716
+A,fqcodel,none,1.0154,0.9705,,0.9995,0.9995,2,231.78,232.30,,11,0,1.16847,82.3178
+B,fifo,500kbps,0.7618,0.7574,0.4906,1.0000,0.9654,3,435.00,434.34,453.68,29,0,56.5188,88.814
+B,fqcodel,500kbps,0.7658,0.7545,0.5008,0.9999,0.9681,3,258.17,258.23,263.17,17,0,1.26188,83.3887
+C,fifo,4Mbps,0.1389,0.0305,1.9386,0.7093,0.3920,3,414.73,350.54,814.75,2459,0,82.181,87.8966
+C,fqcodel,4Mbps,0.5396,0.5402,0.9693,1.0000,0.9192,3,306.23,306.57,424.86,3697,0,52.9958,88.1585

@@ -182,6 +182,48 @@ docs/       面试问答（interview.md）与简历材料（resume.md）
 
 原始数据见 `results/d5_metrics.csv` 与 `results/d5_<scenario>.txt`，吞吐对比图见 `results/figures/d5_throughput.png`。
 
+## D7：多流竞争与公平性（扩展）
+
+Dumbbell 拓扑：3 个发送节点经路由器 R0、R1 与瓶颈链路连接 3 个接收节点（接入链路 10 Mbps/2 ms，瓶颈 2 Mbps/10 ms，与 D4/D5 相同）。三条流共享瓶颈：TCP 流 1、TCP 流 2（均为 BulkSend）与一条 UDP 流（OnOff 恒速）。场景只改变 UDP 干扰强度，队列只改变调度纪律（PfifoFast 100p vs FqCoDel 100p，设备队列同为 DropTail 100p）：
+
+- 组 A：双 TCP，无 UDP
+- 组 B：双 TCP + UDP 500 kbps
+- 组 C：双 TCP + UDP 4 Mbps（瓶颈的 200%，持续过载）
+
+**口径说明（D7.1 审计）**：下表吞吐与 Jain 指数采用**共同观察窗口**口径——同一运行内所有流共用 [最早首包发送，最晚末包接收] 窗口计算速率，合计必然 ≤ 瓶颈容量（实测六组合计 1.973–1.992 Mbps）。最初的逐流跨度口径（各流用自己的收发跨度）会使速率之和超过瓶颈、并把到达时间分布误读为公平性（C/FIFO 的 jain_tcp 曾算出 0.7093，共同窗口口径为 **0.9987**）；跨度口径原始数据保留在 `results/d7_metrics.csv`，审计全过程见 `results/d7_audit.txt` 与 docs 文档。
+
+| 运行 | TCP1 | TCP2 | UDP | jain_tcp | 平均时延（TCP/UDP, ms） |
+|---|---|---|---|---|---|
+| A/FIFO | 1.0047 | 0.9754 | — | 0.9998 | 382 / — |
+| A/FqCoDel | 1.0154 | 0.9701 | — | 0.9995 | 232 / — |
+| B/FIFO | 0.7598 | 0.7574 | 0.4646 | 1.0000 | 435 / 454 |
+| B/FqCoDel | 0.7656 | 0.7545 | 0.4668 | 0.9999 | 258 / 263 |
+| C/FIFO | 0.0283 | 0.0305 | 1.9146 | 0.9987 | 415·351 / 815 |
+| C/FqCoDel | 0.5393 | 0.5402 | 0.9120 | 1.0000 | 306 / 425 |
+
+结论（已按审计修正措辞）：
+
+- 无/低 UDP 干扰时两种策略下 TCP 公平性都接近完美，FqCoDel 的时延低约 40%；其 qdisc 平均占用仅 1.2–1.3 包，但设备队列在所有组别都保持 82–89 包——几乎全部站立排队位于 AQM 管不到的第二层（D5 结论在多流场景复现）。
+- 高速 UDP 下 FIFO 出现非响应流挤压：两条 TCP **同时遭受严重带宽挤压且程度相近**（共同窗口 jain_tcp 0.9987），合计只剩约 0.06 Mbps。
+- **FqCoDel 改善的是 TCP 整体相对 UDP 的带宽份额**（C 组 TCP 各回升到约 0.54 Mbps），TCP 之间的公平性在两种配置下都较高；其隔离并非完全：UDP 仍拿到 0.9120 Mbps，高于三流均分。
+- 六组结束对账全部闭合；逐流 lostPackets 之和与瓶颈两层丢弃计数逐组精确相等——计数证据支持瓶颈 QueueDisc 是主要可观测丢弃位置。FQ 调度、CoDel 延迟控制与设备队列积压三者的作用尚未完全隔离（见 docs 文档的事实/推断分界）。
+
+![D7 throughput, common window](results/figures/d7_throughput.png)
+
+![D7 mean delay](results/figures/d7_delay.png)
+
+![D7 Jain fairness, common window](results/figures/d7_fairness.png)
+
+运行与审计：
+
+```bash
+python3 scripts/run_fairness_experiments.py   # 6 组矩阵 + 7 项校验 -> results/d7_*.csv
+python3 scripts/audit_d7_metrics.py           # D7.1 口径审计 -> results/d7_audit.txt
+python3 scripts/plot_fairness_results.py      # 共同窗口口径三图 -> results/figures/d7_*.png
+```
+
+详细设计、逐流数据与审计记录见 [docs/d7_multiflow.md](docs/d7_multiflow.md)。限制：单一默认随机种子（确定性已校验，未做多 seed 统计推断）；仿真时长与负载组合有限，结论限于本拓扑与参数范围。
+
 ## 问题排查记录
 
 开发中实际定位并解决的问题（均为先取证、后下结论）：
@@ -208,3 +250,5 @@ docs/       面试问答（interview.md）与简历材料（resume.md）
 - D4 自动化实验矩阵、校验与可视化 ✅
 - D5 队列管理（AQM）与 bufferbloat 专项 ✅
 - D6–D7 工程化收尾：最终回归（14 项全 PASS）、README 整理、面试问答与简历材料（docs/）✅
+- 扩展 D7 多流竞争与公平性（dumbbell 拓扑、Jain 指数）✅
+- 扩展 D7.1 指标口径审计（共同观察窗口、Jain 修正、对账复核）✅
