@@ -224,6 +224,31 @@ python3 scripts/plot_fairness_results.py      # 共同窗口口径三图 -> resu
 
 详细设计、逐流数据与审计记录见 [docs/d7_multiflow.md](docs/d7_multiflow.md)。限制：单一默认随机种子（确定性已校验，未做多 seed 统计推断）；仿真时长与负载组合有限，结论限于本拓扑与参数范围。
 
+## 性能评估（升级）：FIFO vs FqCoDel 量化对照
+
+在 D7 场景（组 C 混合流量）上做受控对照：队列策略（FIFO/FqCoDel）× 瓶颈带宽（2/5/10 Mbps）× 5 个种子，共 30 次仿真。基础仿真是确定性的，种子唯一引入的随机因素是三条流启动时刻 [0, 200 ms] 的抖动（相位扰动），故只报告均值 ± 样本标准差作描述性离散度，不做显著性声称。吞吐为共同观察窗口的 IP 层口径；P95 时延来自 FlowMonitor 时延直方图（bin 宽 0.5 ms），是端到端时延而非排队时延。
+
+| 配置 | TCP 总吞吐 Mbps | UDP 吞吐 Mbps | TCP 平均时延 ms（两流均值） | TCP P95 ms（两流均值） | TCP 丢包 % | jain_tcp |
+|---|---|---|---|---|---|---|
+| FIFO / 2M | 0.077 ± 0.026 | 1.907 ± 0.024 | 404.7 ± 83.8 | 803.2 ± 15.7 | 36.55 ± 1.94 | 0.8025 |
+| FqCoDel / 2M | 1.125 ± 0.074 | 0.862 ± 0.076 | 308.5 ± 5.6 | 366.8 ± 21.2 | 0.72 ± 0.53 | 0.9941 |
+| FIFO / 5M | 1.213 ± 0.056 | 3.711 ± 0.111 | 227.2 ± 12.9 | 308.9 ± 7.5 | 6.48 ± 7.21 | 0.9536 |
+| FqCoDel / 5M | 2.966 ± 0.188 | 1.982 ± 0.196 | 134.6 ± 3.5 | 159.9 ± 19.1 | 0.82 ± 1.21 | 0.9961 |
+| FIFO / 10M | 5.878 ± 0.101 | 3.947 ± 0.019 | 108.0 ± 5.0 | 129.4 ± 0.1 | 0.63 ± 0.40 | 0.9578 |
+| FqCoDel / 10M | 5.913 ± 0.274 | 3.796 ± 0.105 | 69.1 ± 3.1 | 92.1 ± 6.0 | 0.70 ± 0.27 | 0.9963 |
+
+要点：合计吞吐两种策略基本相同（链路饱和，策略改变的是**分配**）；FqCoDel 的改善集中在紧瓶颈（2M/5M 的 TCP 吞吐、丢包、时延、公平性），10 Mbps 下 TCP 吞吐与丢包无差异、时延仍改善约 30–36%；FIFO 对启动相位敏感（2M 下 jain_tcp 逐种子 0.63–0.96），单次确定性运行会高估其公平性。完整分析、变化率与不支持的结论见 [docs/performance-evaluation.md](docs/performance-evaluation.md)，可写进简历的数字及出处见 [docs/resume-evidence.md](docs/resume-evidence.md)，升级审计见 [docs/upgrade-audit.md](docs/upgrade-audit.md)。
+
+![Eval throughput](results/figures/eval_throughput.png)
+
+![Eval fairness](results/figures/eval_fairness.png)
+
+```bash
+python3 scripts/run_bottleneck_matrix.py    # 30 次对照仿真 + 汇总 + 校验
+python3 scripts/plot_bottleneck_matrix.py   # 四张对比图（带误差棒）
+python3 scripts/test_metrics.py             # 指标定义单元测试（23 项）
+```
+
 ## 问题排查记录
 
 开发中实际定位并解决的问题（均为先取证、后下结论）：
@@ -252,3 +277,6 @@ python3 scripts/plot_fairness_results.py      # 共同窗口口径三图 -> resu
 - D6–D7 工程化收尾：最终回归（14 项全 PASS）、README 整理、面试问答与简历材料（docs/）✅
 - 扩展 D7 多流竞争与公平性（dumbbell 拓扑、Jain 指数）✅
 - 扩展 D7.1 指标口径审计（共同观察窗口、Jain 修正、对账复核）✅
+- 升级：量化评估体系（P95 采集、共同窗口聚合、指标单元测试）✅
+- 升级：FIFO/FqCoDel × 3 带宽 × 5 相位种子对照矩阵（30 次）与
+  性能评估报告、简历量化证据表 ✅

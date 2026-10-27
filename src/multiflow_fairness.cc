@@ -91,11 +91,16 @@ int main(int argc, char* argv[])
 {
     std::string group = "A";       // A | B | C
     std::string queue = "fifo";    // fifo | fqcodel
+    std::string bottleneck = "2Mbps";
+    uint32_t seed = 0;             // 0 = legacy behaviour (no RNG use)
     std::string csvFile;
 
     CommandLine cmd;
     cmd.AddValue("group", "A (no UDP) | B (UDP 500kbps) | C (UDP 4Mbps)", group);
     cmd.AddValue("queue", "fifo | fqcodel (bottleneck egress policy)", queue);
+    cmd.AddValue("bottleneck", "Bottleneck link rate (default 2Mbps)", bottleneck);
+    cmd.AddValue("seed", "0 = legacy deterministic run; >=1 enables seeded "
+                         "per-flow start-time jitter in [0, 0.2] s", seed);
     cmd.AddValue("csvfile", "Append per-flow metrics to this CSV file", csvFile);
     cmd.Parse(argc, argv);
 
@@ -124,7 +129,7 @@ int main(int argc, char* argv[])
     access.SetDeviceAttribute("DataRate", StringValue("10Mbps"));
     access.SetChannelAttribute("Delay", StringValue("2ms"));
     PointToPointHelper middle;
-    middle.SetDeviceAttribute("DataRate", StringValue("2Mbps"));
+    middle.SetDeviceAttribute("DataRate", StringValue(bottleneck));
     middle.SetChannelAttribute("Delay", StringValue("10ms"));
 
     Ipv4AddressHelper address;
@@ -179,6 +184,26 @@ int main(int argc, char* argv[])
     std::string devQueueDesc = devQueue->GetInstanceTypeId().GetName()
                              + " MaxSize=" + QueueSizeStr(devQueue->GetMaxSize());
 
+    // ---- optional seeded start-time jitter (upgrade phase 2) ----
+    // Legacy mode (seed == 0): RNG is never touched and every flow
+    // starts at exactly 1.0 s, reproducing the saved D7 results.
+    // Seeded mode: RngSeedManager Seed is fixed at 1 and the run number
+    // is the seed; one UniformRandomVariable on a dedicated stream
+    // draws one start offset per flow from [0, 0.2] s. This jitter is
+    // the ONLY stochastic element of the seeded experiments: it
+    // perturbs the phase alignment between the competing flows.
+    // Stop times are unchanged (11.0 s for every flow).
+    double startOffset[3] = {0.0, 0.0, 0.0};
+    if (seed > 0) {
+        RngSeedManager::SetSeed(1);
+        RngSeedManager::SetRun(seed);
+        Ptr<UniformRandomVariable> urv = CreateObject<UniformRandomVariable>();
+        urv->SetStream(100);
+        for (int i = 0; i < 3; i++) {
+            startOffset[i] = urv->GetValue(0.0, 0.2);
+        }
+    }
+
     // ---- applications ----
     const uint16_t ports[3] = {9001, 9002, 9003};
     for (int i = 0; i < 3; i++) {
@@ -211,7 +236,7 @@ int main(int argc, char* argv[])
             sender.SetAttribute("SendSize", UintegerValue(1024));
             senderApp = sender.Install(senders.Get(i));
         }
-        senderApp.Start(Seconds(1.0));
+        senderApp.Start(Seconds(1.0 + startOffset[i]));
         senderApp.Stop(Seconds(11.0));
     }
 
@@ -221,6 +246,11 @@ int main(int argc, char* argv[])
 
     FlowMonitorHelper flowHelper;
     Ptr<FlowMonitor> monitor = flowHelper.InstallAll();
+    // Collect the per-flow delay histogram so a P95 can be derived.
+    // Bin width 0.5 ms: the reported P95 is the right edge of the first
+    // bin whose cumulative count reaches 95% of received packets, i.e.
+    // an approximation with at most one bin width (0.5 ms) of error.
+    monitor->SetAttribute("DelayBinWidth", DoubleValue(0.0005));
 
     Simulator::Schedule(MilliSeconds(10), &SampleQueue, &probe);
     Simulator::Stop(Seconds(12.0));
@@ -246,6 +276,7 @@ int main(int argc, char* argv[])
         uint64_t tx = 0, rx = 0, lost = 0, rxBytes = 0;
         double lossPct = 0, unreceivedPct = 0, avgDelayMs = 0, thr = 0;
         double firstTx = 0, lastRx = 0;
+        double p95DelayMs = 0;
     };
     std::map<uint16_t, Row> rows;
     rows[9001] = {"tcp1", "tcp"};
@@ -274,6 +305,24 @@ int main(int argc, char* argv[])
         r.lastRx = s.timeLastRxPacket.GetSeconds();
         double span = (s.timeLastRxPacket - s.timeFirstTxPacket).GetSeconds();
         r.thr = span > 0 ? s.rxBytes * 8.0 / span / 1000000.0 : 0.0;
+        // P95 of per-packet end-to-end delay from the delay histogram
+        // (bin width 0.5 ms, set via DelayBinWidth above).
+        const Histogram& hist = s.delayHistogram;
+        uint64_t histTotal = 0;
+        for (uint32_t b = 0; b < hist.GetNBins(); b++) {
+            histTotal += hist.GetBinCount(b);
+        }
+        if (histTotal > 0) {
+            double target = 0.95 * histTotal;
+            uint64_t cum = 0;
+            for (uint32_t b = 0; b < hist.GetNBins(); b++) {
+                cum += hist.GetBinCount(b);
+                if (cum >= target) {
+                    r.p95DelayMs = hist.GetBinEnd(b) * 1000.0;
+                    break;
+                }
+            }
+        }
     }
 
     double qdiscMean = probe.samples ? (double)probe.qdiscSum / probe.samples : 0.0;
@@ -282,7 +331,12 @@ int main(int argc, char* argv[])
     std::cout << std::fixed << std::setprecision(4);
     std::cout << "group=" << group << " queue=" << queue
               << " udp_rate=" << (hasUdp ? udpRate : "none")
-              << " bottleneck=2Mbps\n";
+              << " bottleneck=" << bottleneck << "\n";
+    if (seed > 0) {
+        std::cout << "seed=" << seed << " start_offsets_s="
+                  << startOffset[0] << "," << startOffset[1] << ","
+                  << startOffset[2] << "\n";
+    }
     std::cout << "actual_qdisc: " << qdiscDesc << "\n";
     std::cout << "actual_device_queue: " << devQueueDesc << "\n";
     uint64_t totTx = 0, totRx = 0;
@@ -296,6 +350,7 @@ int main(int argc, char* argv[])
                   << " loss_rate_pct=" << r.lossPct
                   << " unreceived_pct=" << r.unreceivedPct
                   << " avg_delay_ms=" << r.avgDelayMs
+                  << " p95_delay_ms=" << r.p95DelayMs
                   << " rxBytes=" << r.rxBytes
                   << " throughput_mbps=" << r.thr
                   << " firstTx=" << r.firstTx << " lastRx=" << r.lastRx << "\n";
@@ -335,8 +390,10 @@ int main(int argc, char* argv[])
                    "rx_bytes,throughput_mbps,first_tx_s,last_rx_s,"
                    "qdisc,device_queue,qdisc_enqueued,qdisc_dropped,"
                    "device_received,device_dropped,qdisc_occ_mean,qdisc_occ_max,"
-                   "device_occ_mean,device_occ_max,qdisc_end,device_end\n";
+                   "device_occ_mean,device_occ_max,qdisc_end,device_end,"
+                   "p95_delay_ms,seed,bottleneck,start_offset_s\n";
         }
+        size_t flowIdx = 0;
         for (auto& kv : rows) {
             const Row& r = kv.second;
             csv << group << "," << queue << "," << (hasUdp ? udpRate : "none")
@@ -350,7 +407,9 @@ int main(int argc, char* argv[])
                 << devReceived << "," << devDropped << ","
                 << qdiscMean << "," << probe.qdiscMax << ","
                 << devMean << "," << probe.devMax << ","
-                << qdiscEnd << "," << devEnd << "\n";
+                << qdiscEnd << "," << devEnd << ","
+                << r.p95DelayMs << "," << seed << "," << bottleneck << ","
+                << startOffset[flowIdx++] << "\n";
         }
     }
 
